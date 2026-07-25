@@ -538,7 +538,11 @@ void COverview::fullRender() {
                         if (!images[id].pWorkspace) {
                             label = "+";
                         } else {
-                            label = std::to_string(images[id].workspaceID);
+                            if (!images[id].pWorkspace) {
+                                  label = "+";
+                            } else {
+                                label = std::to_string(images[id].workspaceID);
+                            }
                         }
                     }
 

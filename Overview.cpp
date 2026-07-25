@@ -969,7 +969,7 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_)
 			}
 		}
 
-		if (PWORKSPACE == startedOn)
+if (PWORKSPACE == startedOn)
 			currentid = i;
 
 		if (PWORKSPACE) {
@@ -999,7 +999,36 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_)
 			if (PWORKSPACE == startedOn)
 				PMONITOR->m_activeSpecialWorkspace.reset();
 		} else {
-			// leave empty
+			// Render active workspace background (wallpaper) for the new empty desktop
+			const auto previousWS = activateWorkspaceForPreview(PMONITOR, startedOn);
+			const auto previewStates =
+					applyExclusiveWorkspacePreviewState(startedOn);
+
+			// Temporarily hide windows on active workspace so only the wallpaper renders
+			std::vector<std::pair<PHLWINDOW, bool>> windowVisibilities;
+			for (const auto &w : Desktop::windowState()->windows()) {
+				if (w && w->m_workspace == startedOn) {
+					windowVisibilities.push_back({w, w->m_isMapped});
+					w->m_isMapped = false;
+				}
+			}
+
+			{
+				CPinnedWindowPreviewGuard pinnedWindowPreviewGuard{
+						showPinnedWindowsInPreview()};
+				g_pHyprRenderer->renderWorkspace(PMONITOR, startedOn,
+																				 Time::steadyNow(), monbox);
+			}
+
+			// Restore window visibility
+			for (const auto &[w, wasMapped] : windowVisibilities) {
+				if (w)
+					w->m_isMapped = wasMapped;
+			}
+
+			restoreWorkspacePreviewStates(previewStates);
+			restoreActiveWorkspaceAfterPreview(PMONITOR, previousWS);
+			startedOn->m_visible = false;
 		}
 
 		image.box = {
