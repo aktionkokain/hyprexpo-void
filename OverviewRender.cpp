@@ -544,7 +544,11 @@ void COverview::fullRender() {
                     } else if (mode == "index") {
                         label = std::to_string(tokenCounter + 1);
                     } else {
-                        label = std::to_string(images[id].workspaceID);
+                        if (!images[id].pWorkspace) {
+                            label = "+";
+                    } else {
+                             label = std::to_string(images[id].workspaceID);
+                        }
                     }
 
                     const int st = resolveState(id);
