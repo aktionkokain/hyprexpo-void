@@ -829,8 +829,6 @@ COverview::~COverview() {
 	resetSubmapIfNeeded();
 }
 
-// MODIFIED
-
 COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_)
 		: startedOn(startedOn_), swipe(swipe_) {
 	const auto PMONITOR = State::monitorState()
@@ -863,13 +861,20 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_)
 
 	const auto PMONITOR_REF = pMonitor.lock();
 
+	images.resize(SIDE_LENGTH * SIDE_LENGTH);
+
+	// Initialize ALL slots as invalid by default
+	for (size_t i = 0; i < images.size(); ++i) {
+		images[i].workspaceID = WORKSPACE_INVALID;
+		images[i].pWorkspace = nullptr;
+	}
+
 	// 1. Collect active non-empty workspaces + currently active workspace
 	std::vector<int> targetIDs;
 	for (const auto &w : State::workspaceState()->workspacesCopy()) {
 		if (!w || w->m_monitor != PMONITOR_REF || w->m_isSpecialWorkspace)
 			continue;
 
-		// Include if workspace contains windows OR is the workspace overview started on
 		if (workspaceHasWindows(w) || w == startedOn) {
 			targetIDs.push_back(w->m_id);
 		}
@@ -879,17 +884,16 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_)
 	std::sort(targetIDs.begin(), targetIDs.end());
 	targetIDs.erase(std::unique(targetIDs.begin(), targetIDs.end()), targetIDs.end());
 
-	// 3. Append EXACTLY ONE empty workspace for "Create New Desktop" (+)
+	// 3. Append EXACTLY ONE empty workspace for "Create New Desktop"
 	int createNewID = 1;
 	if (!targetIDs.empty()) {
 		createNewID = targetIDs.back() + 1;
 	}
 	targetIDs.push_back(createNewID);
 
-	// 4. Resize images array to match ONLY valid workspaces + 1 create workspace
-	images.resize(targetIDs.size());
-
-	for (size_t i = 0; i < images.size(); ++i) {
+	// 4. Fill images array up to targetIDs count
+	const size_t maxTiles = std::min(images.size(), targetIDs.size());
+	for (size_t i = 0; i < maxTiles; ++i) {
 		images[i].workspaceID = targetIDs[i];
 	}
 
@@ -939,6 +943,14 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_)
 
 	for (size_t i = 0; i < images.size(); ++i) {
 		COverview::SWorkspaceImage &image = images[i];
+
+		// Skip invalid / unused grid slots completely
+		if (image.workspaceID == WORKSPACE_INVALID) {
+			image.pWorkspace = nullptr;
+			image.box = CBox{0, 0, 0, 0};
+			continue;
+		}
+
 		ensureFramebuffer(image, monbox,
 											framebufferFormatWithAlpha(
 													PMONITOR->m_output->state->state().drmFormat));

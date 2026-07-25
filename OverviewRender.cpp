@@ -26,6 +26,9 @@ void COverview::redrawID(int id, bool forcelowres) {
     if (!MON)
         return;
 
+    if (id < 0 || id >= (int)images.size() || images[id].workspaceID == WORKSPACE_INVALID)
+        return;
+
     if (MON->m_activeWorkspace != startedOn && !closing) {
         // likely user changed.
         onWorkspaceChange();
@@ -35,8 +38,6 @@ void COverview::redrawID(int id, bool forcelowres) {
 
     Render::GL::g_pHyprOpenGL->makeEGLCurrent();
     settleWorkspaceMoveAnimations();
-
-    id = std::clamp(id, 0, SIDE_LENGTH * SIDE_LENGTH - 1);
 
     Vector2D tileSize       = MON->m_size / SIDE_LENGTH;
     Vector2D tileRenderSize = (MON->m_size - Vector2D{GAP_WIDTH, GAP_WIDTH} * (SIDE_LENGTH - 1)) / SIDE_LENGTH;
@@ -146,7 +147,7 @@ void COverview::redrawAll(bool forcelowres) {
     if (!MON)
         return;
 
-    for (size_t i = 0; i < (size_t)(SIDE_LENGTH * SIDE_LENGTH); ++i) {
+    for (size_t i = 0; i < images.size(); ++i) {
         redrawID(i, forcelowres);
     }
 }
@@ -175,7 +176,6 @@ void COverview::onDamageReported() {
     static auto* const* PGAPSO = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:gaps_out")->getDataStaticPtr();
     const float OUTER       = std::max<Hyprlang::INT>(0, **PGAPSO) * (closing ? (1.0 - size->getPercent()) : size->getPercent());
     Vector2D tileRenderSize = (SIZE - Vector2D{GAPSIZE, GAPSIZE} * (SIDE_LENGTH - 1) - Vector2D{OUTER * 2, OUTER * 2}) / SIDE_LENGTH;
-    // const auto& TILE           = images[std::clamp(openedID, 0, SIDE_LENGTH * SIDE_LENGTH)];
     CBox texbox = CBox{OUTER + (openedID % SIDE_LENGTH) * tileRenderSize.x + (openedID % SIDE_LENGTH) * GAPSIZE,
                        OUTER + (openedID / SIDE_LENGTH) * tileRenderSize.y + (openedID / SIDE_LENGTH) * GAPSIZE, tileRenderSize.x, tileRenderSize.y}
                       .translate(MON->m_position);
@@ -192,8 +192,6 @@ void COverview::close(bool switchToSelection) {
     if (closing)
         return;
 
-    // The teardown animation is now committed; lock out further swipe input so a
-    // re-grabbed gesture can't rewind it (issue #57 follow-up: close replay).
     m_closeCommitted = true;
 
     const auto MON = pMonitor.lock();
@@ -207,7 +205,7 @@ void COverview::close(bool switchToSelection) {
 
     const int   ID = closeOnID == -1 ? openedID : closeOnID;
 
-    const int   SAFEID = std::clamp(ID, 0, SIDE_LENGTH * SIDE_LENGTH - 1);
+    const int   SAFEID = std::clamp(ID, 0, (int)images.size() - 1);
     const auto& TILE   = images[SAFEID];
 
     Vector2D    tileSize = (MON->m_size / SIDE_LENGTH);
@@ -222,9 +220,6 @@ void COverview::close(bool switchToSelection) {
     if (switchToSelection && TILE.workspaceID != MON->activeWorkspaceID()) {
         MON->setSpecialWorkspace(0);
 
-        // If this tile's workspace was WORKSPACE_INVALID, move to the next
-        // empty workspace. This should only happen if skip_empty is on, in
-        // which case some tiles will be left with this ID intentionally.
         const int  NEWID = TILE.workspaceID == WORKSPACE_INVALID ? getWorkspaceIDNameFromString("emptynm").id : TILE.workspaceID;
 
         PHLWORKSPACE NEWIDWS;
@@ -267,8 +262,8 @@ void COverview::onWorkspaceChange() {
     else
         startedOn = MON->m_activeWorkspace;
 
-    for (size_t i = 0; i < (size_t)(SIDE_LENGTH * SIDE_LENGTH); ++i) {
-        if (images[i].workspaceID != MON->activeWorkspaceID())
+    for (size_t i = 0; i < images.size(); ++i) {
+        if (images[i].workspaceID == WORKSPACE_INVALID || images[i].workspaceID != MON->activeWorkspaceID())
             continue;
 
         openedID = i;
@@ -331,18 +326,19 @@ void COverview::fullRender() {
     const int HOVER_ROUND_SCALED  = **PTILEROUNDH >= 0 ? std::max(0, (int)std::lround((double)**PTILEROUNDH * MON->m_scale)) : BASE_ROUND_SCALED;
     const float ROUND_PWR         = **PTOUNDPWR;
 
-    // (shadows moved to feature/shadows branch)
-
     std::vector<CBox> tileBoxes(images.size());
 
     for (size_t y = 0; y < (size_t)SIDE_LENGTH; ++y) {
         for (size_t x = 0; x < (size_t)SIDE_LENGTH; ++x) {
             const int id = x + y * SIDE_LENGTH;
-            CBox      texbox{OUTER + x * tileRenderSize.x + x * GAPSIZE, OUTER + y * tileRenderSize.y + y * GAPSIZE, tileRenderSize.x, tileRenderSize.y};
+            if (id >= (int)images.size() || images[id].workspaceID == WORKSPACE_INVALID)
+                continue;
+
+            CBox texbox{OUTER + x * tileRenderSize.x + x * GAPSIZE, OUTER + y * tileRenderSize.y + y * GAPSIZE, tileRenderSize.x, tileRenderSize.y};
             texbox.scale(MON->m_scale).translate(pos->value());
             texbox.round();
             tileBoxes[id] = texbox;
-            // per-tile rounding override for focus/current/hover (priority: focus > current > hover)
+
             int tileRound = BASE_ROUND_SCALED;
             if ((int)id == kbFocusID)
                 tileRound = FOCUS_ROUND_SCALED;
@@ -351,14 +347,13 @@ void COverview::fullRender() {
             else if ((int)id == hoveredID)
                 tileRound = HOVER_ROUND_SCALED;
 
-            // clamp rounding to tile size
             const int maxCornerPx = std::max(0, (int)std::floor(std::min(texbox.w, texbox.h) / 2.0));
             tileRound = std::min(tileRound, maxCornerPx);
 
-            // no shadow in this branch
-
-            CRegion damage{0, 0, INT16_MAX, INT16_MAX};
-            Render::GL::g_pHyprOpenGL->renderTextureInternal(images[id].fb->getTexture(), texbox, {.damage = &damage, .a = 1.0, .round = tileRound, .roundingPower = ROUND_PWR});
+            if (images[id].fb && images[id].fb->getTexture()) {
+                CRegion damage{0, 0, INT16_MAX, INT16_MAX};
+                Render::GL::g_pHyprOpenGL->renderTextureInternal(images[id].fb->getTexture(), texbox, {.damage = &damage, .a = 1.0, .round = tileRound, .roundingPower = ROUND_PWR});
+            }
         }
     }
 
@@ -388,7 +383,6 @@ void COverview::fullRender() {
     static auto  const* PBCOLCUR     = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:border_color_current")->getDataStaticPtr();
     static auto  const* PBCOLFOC     = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:border_color_focus")->getDataStaticPtr();
     static auto  const* PBCOLHOV     = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:border_color_hover")->getDataStaticPtr();
-    // Deprecated configs for backwards compatibility
     static auto  const* PBGRCUR      = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:border_grad_current")->getDataStaticPtr();
     static auto  const* PBGREFOC     = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:border_grad_focus")->getDataStaticPtr();
     static auto  const* PBGREHOV     = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:border_grad_hover")->getDataStaticPtr();
@@ -410,7 +404,6 @@ void COverview::fullRender() {
 
     // draw labels
     if (**PLABELEN || **PSELECTEN || showWorkspaceNumbers) {
-        // use the tracked hoveredID (cleared during closing)
         const int labelHoveredID = closing ? -1 : hoveredID;
 
         auto shouldShow = [&](int id) -> bool {
@@ -436,7 +429,6 @@ void COverview::fullRender() {
         };
 
         auto resolveState = [&](int id) -> int {
-            // precedence: focus > current > hover > default
             if (id == kbFocusID)
                 return 2; // focus
             if (id == openedID)
@@ -525,10 +517,9 @@ void COverview::fullRender() {
         for (size_t y = 0; y < (size_t)SIDE_LENGTH; ++y) {
             for (size_t x = 0; x < (size_t)SIDE_LENGTH; ++x) {
                 const int id = x + y * SIDE_LENGTH;
-                if (images[id].workspaceID == WORKSPACE_INVALID)
+                if (id >= (int)images.size() || images[id].workspaceID == WORKSPACE_INVALID)
                     continue;
 
-                // compute tile box again for label placement
                 CBox tile{OUTER + x * tileRenderSize.x + x * GAPSIZE, OUTER + y * tileRenderSize.y + y * GAPSIZE, tileRenderSize.x, tileRenderSize.y};
                 tile.scale(MON->m_scale).translate(pos->value());
                 tile.round();
@@ -546,8 +537,8 @@ void COverview::fullRender() {
                     } else {
                         if (!images[id].pWorkspace) {
                             label = "+";
-                    } else {
-                             label = std::to_string(images[id].workspaceID);
+                        } else {
+                            label = std::to_string(images[id].workspaceID);
                         }
                     }
 
@@ -575,16 +566,13 @@ void COverview::fullRender() {
         }
     }
 
-    // draw borders for hover, current and focus (priority order: focus > current > hover)
-
-    // pass rounding based on state
+    // draw borders for hover, current and focus
     const int RND_CUR = CURRENT_ROUND_SCALED;
     const int RND_FOC = FOCUS_ROUND_SCALED;
     const int RND_HOV = HOVER_ROUND_SCALED;
 
-    // Helper to parse border config (supports rgb/hex/gradient, with deprecated fallback)
     auto drawBorderForID = [&](int id, const std::string& borderSpec, const std::string& deprecatedGradSpec, int roundScaled, int borderWidthOverride = -1) {
-        if (id < 0)
+        if (id < 0 || id >= (int)images.size() || images[id].workspaceID == WORKSPACE_INVALID)
             return;
         if (borderWidthOverride == 0)
             return;
@@ -595,12 +583,9 @@ void COverview::fullRender() {
         box.round();
         const int BWIDTH = std::max(1, borderWidthOverride > 0 ? borderWidthOverride : (int)**PBWIDTH);
 
-        // Determine which spec to use (prefer new format, fallback to deprecated)
         std::string effectiveSpec = borderSpec.empty() ? deprecatedGradSpec : borderSpec;
 
-        // Auto-detect format: gradient vs solid color
         if (isGradientBorderSpec(effectiveSpec)) {
-            // Render as gradient border (hyprland style)
             const auto spec = parseGradientSpec(effectiveSpec);
             if (spec.valid) {
                 Config::CGradientValueData grad;
@@ -654,7 +639,7 @@ void COverview::fullRender() {
             Log::logger->log(Log::ERR, "[hyprexpo] invalid drag_drop_proxy_border_color config: {}", effectiveSpec);
     };
 
-    // Draw borders in order: hover (lowest), then current, then focus (highest priority)
+    // Draw borders for valid tiles only
     if (hoveredID != -1 && hoveredID != openedID && hoveredID != kbFocusID)
         drawBorderForID(hoveredID, std::string{*PBCOLHOV}, std::string{*PBGREHOV}, RND_HOV);
     drawBorderForID(openedID, std::string{*PBCOLCUR}, std::string{*PBGRCUR}, RND_CUR);
