@@ -4,9 +4,9 @@
 
 **An Exposé-style workspace and window overview for Hyprland.**
 
-[![Release](https://img.shields.io/github/v/release/sandwichfarm/hyprexpo?style=for-the-badge)](https://github.com/sandwichfarm/hyprexpo/releases)
-[![Compatibility checks](https://img.shields.io/github/actions/workflow/status/sandwichfarm/hyprexpo/compatibility.yml?branch=master&style=for-the-badge&label=compatibility)](https://github.com/sandwichfarm/hyprexpo/actions/workflows/compatibility.yml)
-[![BSD 3-Clause license](https://img.shields.io/github/license/sandwichfarm/hyprexpo?style=for-the-badge)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/aktionkokain/hyprexpo-void?style=for-the-badge)](https://github.com/aktionkokain/hyprexpo-void/releases)
+[![Compatibility checks](https://img.shields.io/github/actions/workflow/status/aktionkokain/hyprexpo-void/compatibility.yml?branch=main&style=for-the-badge&label=compatibility)](https://github.com/aktionkokain/hyprexpo-void/actions/workflows/compatibility.yml)
+[![BSD 3-Clause license](https://img.shields.io/github/license/aktionkokain/hyprexpo-void?style=for-the-badge)](LICENSE)
 
 [Quick start](#quick-start) · [Documentation](https://hyprexpo.lol/docs/) · [Configuration](#quick-config) · [Troubleshooting](docs/troubleshooting.md)
 
@@ -22,7 +22,8 @@ It continues the original HyprExpo plugin with configurable grids, labels,
 borders, multi-monitor placement, and Lua gestures.
 
 - **Workspace grids:** square, rectangular, or dynamic layouts, with workspace
-  names, configurable gaps, rounded tiles, and borders.
+  names, configurable gaps, rounded tiles, borders, and an optional `+` tile
+  for opening the next workspace.
 - **Keyboard and gestures:** focus navigation, workspace or visible-position
   selection, cancellation, and Lua-configured touchpad gestures.
 - **Multi-monitor placement:** choose which workspaces appear on each monitor.
@@ -60,7 +61,7 @@ first. After a Hyprland upgrade, follow the [rebuild and reload steps](docs/gett
 If existing plugin settings become unknown, see [missing-plugin recovery](docs/troubleshooting.md#unknown-hyprexpo-config-keys-after-an-upgrade).
 
 ```bash
-hyprpm add https://github.com/sandwichfarm/hyprexpo
+hyprpm add https://github.com/aktionkokain/hyprexpo-void
 hyprpm enable hyprexpo
 hyprpm reload
 ```
@@ -216,8 +217,8 @@ or versioned pkg-config module and reject Lua 5.4 or 5.6; see the
 for module names and explicit overrides.
 
 ```bash
-git clone https://github.com/sandwichfarm/hyprexpo
-cd hyprexpo
+git clone https://github.com/aktionkokain/hyprexpo-void
+cd hyprexpo-void
 make all
 ```
 
@@ -300,7 +301,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing compatibility or a manag
 installation. Include the Hyprland revision you tested and the relevant
 [smoke-check results](docs/guides/runtime-smoke.md) with your change.
 
-For bug reports, [open an issue](https://github.com/sandwichfarm/hyprexpo/issues/new)
+For bug reports, [open an issue](https://github.com/aktionkokain/hyprexpo-void/issues/new)
 with steps to reproduce, `hyprctl version`, your installation method, relevant
 plugin configuration, and any errors.
 

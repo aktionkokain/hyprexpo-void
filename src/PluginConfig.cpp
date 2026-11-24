@@ -30,6 +30,7 @@ void registerHyprexpoConfigValues() {
     addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:dynamic_grid", "legacy dynamic grid toggle", HyprexpoConfig::LEGACY_DYNAMIC_GRID_DEFAULT));
     addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:fill_gaps", "legacy gap filling toggle", HyprexpoConfig::LEGACY_FILL_GAPS_DEFAULT));
     addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:mru_sort", "legacy mru sorting toggle", HyprexpoConfig::LEGACY_MRU_SORT_DEFAULT));
+    addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:create_workspace_tile", "show a tile for creating the next workspace in dynamic grids", HyprexpoConfig::CREATE_WORKSPACE_TILE_DEFAULT));
     addConfigValue(makeShared<Config::Values::CColorValue>("plugin:hyprexpo:active_highlight_col", "legacy active tile highlight color", HyprexpoConfig::LEGACY_ACTIVE_HIGHLIGHT_COL_DEFAULT));
     addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:active_highlight_border", "legacy active tile highlight border", HyprexpoConfig::LEGACY_ACTIVE_HIGHLIGHT_BORDER_DEFAULT));
     addConfigValue(makeShared<Config::Values::CColorValue>("plugin:hyprexpo:hover_highlight_col", "legacy hovered tile highlight color", HyprexpoConfig::LEGACY_HOVER_HIGHLIGHT_COL_DEFAULT));

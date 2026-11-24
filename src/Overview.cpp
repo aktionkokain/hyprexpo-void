@@ -986,18 +986,19 @@ WORKSPACEID workspaceIDForMonitor(const PHLMONITOR& monitor, const std::string& 
     return workspaceIDForSelector(monitor, selector);
 }
 
-WORKSPACEID nextEmptyWorkspaceIDForMonitor(const PHLMONITOR& monitor) {
+WORKSPACEID nextEmptyWorkspaceIDForMonitor(const PHLMONITOR& monitor, const std::vector<WORKSPACEID>& excluded) {
     if (!monitor)
         return WORKSPACE_INVALID;
 
     const auto workspaces = State::workspaceState()->workspacesCopy();
     // Unlike emptynm, r+ excludes existing foreign-owned workspaces as well as
-    // foreign bindings. At most workspaces.size() candidates can be occupied.
-    for (size_t step = 1; step <= workspaces.size() + 1; ++step) {
+    // foreign bindings. Also account for excluded synthetic IDs, such as a
+    // fill-gaps range containing workspaces that do not exist yet.
+    for (size_t step = 1; step <= workspaces.size() + excluded.size() + 1; ++step) {
         const auto id = workspaceIDForMonitor(monitor, "r+" + std::to_string(step));
         if (id == WORKSPACE_INVALID)
             break;
-        if (id <= 0 || id <= activeWorkspaceID(monitor))
+        if (id <= 0 || id <= activeWorkspaceID(monitor) || std::ranges::find(excluded, id) != excluded.end())
             continue;
 
         const auto workspace = std::ranges::find_if(workspaces, [&](const auto& ws) { return workspaceHasID(ws, id); });
@@ -1110,6 +1111,7 @@ COverview::COverview(PHLWORKSPACE startedOn_, PHLMONITOR monitor_, bool swipe_, 
     auto* const* PDYNAMIC  = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:dynamic_grid")->getDataStaticPtr();
     auto* const* PFILLGAPS = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:fill_gaps")->getDataStaticPtr();
     auto* const* PMRUSORT  = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:mru_sort")->getDataStaticPtr();
+    auto* const* PCREATETILE = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:create_workspace_tile")->getDataStaticPtr();
     auto* const* PSHNAMES  = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:show_workspace_names")->getDataStaticPtr();
     auto* const* PANIMATE  = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:animate_entry")->getDataStaticPtr();
     auto* const* PWALLBG   = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprexpo:wallpaper_bg")->getDataStaticPtr();
@@ -1282,7 +1284,8 @@ COverview::COverview(PHLWORKSPACE startedOn_, PHLMONITOR monitor_, bool swipe_, 
         const int64_t currentWorkspaceID = startedOn ? workspaceID(startedOn) : activeWorkspaceID(MON);
 
         for (const auto& workspace : State::workspaceState()->workspacesCopy()) {
-            if (!workspace || workspace->type() == Workspace::eWorkspaceType::SPECIAL || workspace->m_monitor != MON || workspace->getWindowCount() <= 0)
+            if (!workspace || workspace->type() == Workspace::eWorkspaceType::SPECIAL || workspace->m_monitor != MON ||
+                (workspace->getWindowCount() <= 0 && workspace != startedOn))
                 continue;
 
             visibleWorkspaceIDs.push_back(workspaceID(workspace));
@@ -1309,10 +1312,23 @@ COverview::COverview(PHLWORKSPACE startedOn_, PHLMONITOR monitor_, bool swipe_, 
             }
         }
 
+        // A dynamic overview can optionally end with a tile for the next
+        // available workspace. The tile keeps a real workspace ID so the
+        // existing click, keyboard, and drag paths can create/select it.
+        WORKSPACEID createWorkspaceID = WORKSPACE_INVALID;
+        if (**PCREATETILE && visibleWorkspaceIDs.size() < HyprexpoConfig::DYNAMIC_GRID_MAX_TILES) {
+            createWorkspaceID = nextEmptyWorkspaceIDForMonitor(PMONITOR, visibleWorkspaceIDs);
+            if (createWorkspaceID != WORKSPACE_INVALID) {
+                visibleWorkspaceIDs.push_back(createWorkspaceID);
+            }
+        }
+
         gridShape = Hyprexpo::computeDynamicGridShape((int)visibleWorkspaceIDs.size());
         images.resize(visibleWorkspaceIDs.size());
-        for (size_t i = 0; i < visibleWorkspaceIDs.size(); ++i)
+        for (size_t i = 0; i < visibleWorkspaceIDs.size(); ++i) {
             images[i].workspaceID = visibleWorkspaceIDs[i];
+            images[i].createWorkspaceTile = createWorkspaceID != WORKSPACE_INVALID && visibleWorkspaceIDs[i] == createWorkspaceID;
+        }
     }
 
     Render::GL::g_pHyprOpenGL->makeEGLCurrent();
@@ -1351,6 +1367,7 @@ COverview::COverview(PHLWORKSPACE startedOn_, PHLMONITOR monitor_, bool swipe_, 
             .box                  = monbox,
             .showPinnedWindows    = showPinnedWindowsInPreview(),
             .blockSurfaceFeedback = true,
+            .renderStartedWorkspaceWallpaper = image.createWorkspaceTile,
         }, image.fb)) {
             const auto owner = PWORKSPACE ? PWORKSPACE->m_monitor.lock() : PHLMONITOR{};
             image.wasActiveOnSource = owner && PWORKSPACE == owner->m_activeWorkspace;

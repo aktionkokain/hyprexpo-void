@@ -12,17 +12,17 @@ sudo pacman -S hyprpm
 ```
 
 ```bash
-hyprpm add https://github.com/sandwichfarm/hyprexpo
+hyprpm add https://github.com/aktionkokain/hyprexpo-void
 hyprpm enable hyprexpo
 hyprpm reload
 ```
 
-The plugin repository is named `hyprexpo` in `hyprpm.toml`, and the built output is `hyprexpo.so`.
+The repository is named `hyprexpo-void` in `hyprpm.toml`; the plugin and built output remain `hyprexpo` and `hyprexpo.so`.
 
 When registering from a source checkout, use the guarded wrapper:
 
 ```bash
-./scripts/hyprpm-add.sh https://github.com/sandwichfarm/hyprexpo
+./scripts/hyprpm-add.sh https://github.com/aktionkokain/hyprexpo-void
 ```
 
 It also accepts a revision argument for the [development track](../guides/development-installation.md).
@@ -79,8 +79,8 @@ an incompatible or missing module stops the plugin build with an error.
 Build with the Makefile:
 
 ```bash
-git clone https://github.com/sandwichfarm/hyprexpo
-cd hyprexpo
+git clone https://github.com/aktionkokain/hyprexpo-void
+cd hyprexpo-void
 make all
 ```
 

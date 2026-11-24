@@ -667,7 +667,9 @@ void COverview::fullRender(Render::CRenderContext& ctx) {
             if (Hyprexpo::shouldShowWorkspaceLabel(labelEnabled, labelShow, (int)id == labelHoveredID, (int)id == kbFocusID, (int)id == openedID)) {
                 std::string label;
                 const std::string mode = showWorkspaceNumbers ? std::string{"id"} : std::string{*PLABELMODE};
-                if (dynamicGrid && showWorkspaceNames) {
+                if (image.createWorkspaceTile) {
+                    label = "+";
+                } else if (dynamicGrid && showWorkspaceNames) {
                     label = resolveWorkspaceName(id);
                 } else if (mode == "token") {
                     if (tokenCounter < (int)labelTokens.size() && !labelTokens[tokenCounter].empty())

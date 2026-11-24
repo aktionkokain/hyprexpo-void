@@ -6,6 +6,7 @@ namespace HyprexpoConfig {
 inline constexpr int         LEGACY_DYNAMIC_GRID_DEFAULT         = 0;
 inline constexpr int         LEGACY_FILL_GAPS_DEFAULT            = 0;
 inline constexpr int         LEGACY_MRU_SORT_DEFAULT             = 0;
+inline constexpr int         CREATE_WORKSPACE_TILE_DEFAULT       = 1;
 inline constexpr unsigned    LEGACY_ACTIVE_HIGHLIGHT_COL_DEFAULT = 0xFF3584E4;
 inline constexpr int         LEGACY_ACTIVE_HIGHLIGHT_BORDER_DEFAULT = 2;
 inline constexpr unsigned    LEGACY_HOVER_HIGHLIGHT_COL_DEFAULT  = 0x80FFFFFF;

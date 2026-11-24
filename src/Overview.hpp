@@ -98,6 +98,7 @@ class COverview final : public IOverviewSession {
         SP<Render::IFramebuffer> fb;
         int64_t                  workspaceID = -1;
         PHLWORKSPACE             pWorkspace;
+        bool                     createWorkspaceTile = false;
         bool                     wasActiveOnSource = false;
         bool                     hadPinnedWindows = false;
         CBox                     box;

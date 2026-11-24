@@ -13,6 +13,7 @@
 #include <hyprland/src/animation/WorkspaceAnimationController.hpp>
 #include <hyprland/src/desktop/view/window/Window.hpp>
 #include <hyprland/src/desktop/view/window/WindowPresentation.hpp>
+#include <hyprland/src/desktop/state/WindowState.hpp>
 #include <hyprland/src/helpers/time/Time.hpp>
 #include <hyprutils/utils/ScopeGuard.hpp>
 #include <hyprland/src/render/OpenGL.hpp>
@@ -260,6 +261,40 @@ bool captureWorkspacePreview(const SWorkspaceCaptureRequest& original, SP<Render
 
             if (request.workspace == request.startedOn)
                 request.monitor->m_activeSpecialWorkspace.reset();
+        } else if (request.renderStartedWorkspaceWallpaper) {
+            const auto previousWS = activateWorkspaceForPreview(request.monitor, request.startedOn);
+            const auto previewStates = applyExclusiveWorkspacePreviewState(request.startedOn);
+            bool previewRestored = false;
+            Hyprutils::Utils::CScopeGuard previewStateGuard{[&]() {
+                if (previewRestored)
+                    return;
+                try {
+                    restoreWorkspacePreviewStates(previewStates);
+                    restoreActiveWorkspaceAfterPreview(request.monitor, previousWS);
+                } catch (...) {}
+            }};
+            {
+                std::vector<std::pair<PHLWINDOW, bool>> mappedStates;
+                for (const auto& window : Desktop::windowState()->windows()) {
+                    if (!window || window->m_workspace != request.startedOn)
+                        continue;
+                    mappedStates.emplace_back(window, window->m_isMapped);
+                    window->m_isMapped = false;
+                }
+                Hyprutils::Utils::CScopeGuard mappedStateGuard{[&]() {
+                    for (const auto& [window, wasMapped] : mappedStates) {
+                        if (window)
+                            window->m_isMapped = wasMapped;
+                    }
+                }};
+
+                CPinnedWindowPreviewGuard pinnedWindowPreviewGuard{request.showPinnedWindows};
+                g_pHyprRenderer->renderWorkspace(g_pHyprRenderer->context(), request.monitor, request.startedOn, Time::steadyNow(), captureBox);
+            }
+
+            restoreWorkspacePreviewStates(previewStates);
+            restoreActiveWorkspaceAfterPreview(request.monitor, previousWS);
+            previewRestored = true;
         } else {
             CPinnedWindowPreviewGuard pinnedWindowPreviewGuard{request.showPinnedWindows};
             g_pHyprRenderer->renderWorkspace(g_pHyprRenderer->context(), request.monitor, request.workspace, Time::steadyNow(), captureBox);

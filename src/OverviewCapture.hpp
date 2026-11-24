@@ -18,6 +18,7 @@ struct SWorkspaceCaptureRequest {
     bool         showPinnedWindows      = false;
     bool         blockSurfaceFeedback   = false;
     bool         animateStartedOnRestore = false;
+    bool         renderStartedWorkspaceWallpaper = false;
 };
 
 struct SWindowCaptureResult {

@@ -1,6 +1,6 @@
 [repository]
-name = "hyprexpo"
-authors = ["sandwich.farm"]
+name = "hyprexpo-void"
+authors = ["aktionkokain"]
 commit_pins = [
     ["ea444c35bb23b6e34505ab6753e069de7801cc25", "6aeea4fab4819e3474fa83e2dafa21a0dce22547"], # 0.53.0
     ["ab1d80f3d6aebd57a0971b53a1993b1c1dfe0b09", "6aeea4fab4819e3474fa83e2dafa21a0dce22547"], # 0.53.1
@@ -25,7 +25,7 @@ commit_pins = [
 
 [hyprexpo]
 description = "Exposé-style workspace and window overviews for Hyprland"
-authors = ["sandwich"]
+authors = ["aktionkokain"]
 output = "hyprexpo.so"
 build = [
 "make all"

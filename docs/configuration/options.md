@@ -50,15 +50,16 @@ it is not the configuration block.
 
 ## PR #605 Compatibility Keys
 
-These keys are registered for the active-overview port and are intentionally
-separate from the richer sandwichfarm config surface. They are kept for later
-integration and should not replace the newer keys below.
+These compatibility keys remain available alongside the current configuration
+surface. Use the newer equivalents where one is listed; the legacy names are
+kept for existing configurations.
 
-| key | type | legacy meaning | newer sandwichfarm counterpart |
+| key | type | legacy meaning | newer equivalent |
 | --- | --- | --- | --- |
 | `plugin:hyprexpo:dynamic_grid` | int | opt-in dynamic workspace enumeration (default: off) | no direct equivalent yet |
 | `plugin:hyprexpo:fill_gaps` | int | expand min..max workspace IDs when dynamic | no direct equivalent yet |
 | `plugin:hyprexpo:mru_sort` | int | put the current workspace first | no direct equivalent yet |
+| `plugin:hyprexpo:create_workspace_tile` | int | append a selectable `+` tile to create the next workspace in dynamic grids | no direct equivalent (default: `1`) |
 | `plugin:hyprexpo:active_highlight_col` | color | active tile highlight color | `border_color_current` |
 | `plugin:hyprexpo:active_highlight_border` | int | active tile highlight width | `border_width` |
 | `plugin:hyprexpo:hover_highlight_col` | color | hovered tile highlight color | `border_color_hover` |
@@ -72,8 +73,8 @@ integration and should not replace the newer keys below.
 | `plugin:hyprexpo:animate_entry` | int | legacy open animation toggle | no direct equivalent yet |
 | `plugin:hyprexpo:wallpaper_bg` | int | draw the monitor wallpaper behind the overview tiles | optional active-overview extension |
 
-Enable the active-workspace layout explicitly; all compatibility options default
-to the existing fixed-grid behavior:
+Enable the active-workspace layout explicitly. The `+` tile applies only when
+`dynamic_grid` is enabled:
 
 ```ini
 plugin {
@@ -81,6 +82,7 @@ plugin {
         dynamic_grid = 1
         fill_gaps = 0
         mru_sort = 0
+        create_workspace_tile = 1
         show_workspace_names = 1
         label_pos = top_right
         label_size = 48
@@ -88,6 +90,11 @@ plugin {
     }
 }
 ```
+
+When `dynamic_grid = 1`, `create_workspace_tile = 1` appends a `+` tile for
+the next available workspace. Selecting it creates that workspace. The tile
+previews the current workspace background with its windows hidden. Set it to
+`0` to show only existing workspaces.
 
 ## Layout and Behavior
 
